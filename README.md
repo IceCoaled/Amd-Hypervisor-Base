@@ -14,7 +14,7 @@ AMD Reference 1 [(24593)](https://www.amd.com/content/dam/amd/en/documents/proce
 
 AMD Reference 2 [(24594)](https://www.amd.com/content/dam/amd/en/documents/processor-tech-docs/programmer-references/24594.pdf)
 
-Secret Club Reference[(2020/04/12)](https://secret.club/2020/04/13/how-anti-cheats-detect-system-emulation.html)
+Secret Club Reference[(AntiCheat Detection Methods)](https://secret.club/2020/04/13/how-anti-cheats-detect-system-emulation.html)
 
 How Anti-Cheats Detect System Emulation by Secret Club. This article discusses the techniques anti-cheat solutions use to detect system emulation, which is highly relevant to bypassing anti-virtualization detection when running the hypervisor.
 
