@@ -30,7 +30,7 @@ Project Highlights
 
 Driver Setup and Initialization: The project successfully initializes the driver entry points, indicating module and kernel list success. The setup includes nested pages and MSR map configurations.
 
-MSR and Nested Pages Setup: Custom MSR (Model Specific Register) mappings were implemented, allowing efficient communication between the guest and hypervisor.
+MSR and Nested Pages Setup: Custom MSR (Model Specific Register) for EFER, more should be added.
 
 Features
 
@@ -38,7 +38,7 @@ Uses deferred procedure calls to virtualize processors.
 
 I leverage a lot of C++ stuff in this driver even went the hard route of making the main hypervisor a class.
 
-SVM-Based Virtualization: Leveraging AMD's SVM technology to create a hypervisor that can virtualize multiple processors with full control over virtualization settings.
+SVM-Based Virtualization: Leveraging AMD's SVM technology to create a hypervisor that can virtualize multiple processors.
 
 Nested Pages Support: The hypervisor enables Nested Page Table (NPT) support to provide better performance in memory management and isolation.
 
@@ -47,8 +47,6 @@ Detection Evasion: Several methods are being researched to bypass anti-cheat det
 Goals
 
 Optimization: Improve the hypervisor's performance and reduce overhead in nested and non-nested environments.
-
-Security: Develop mechanisms to protect the hypervisor from being detected by anti-cheat software.
 
 Contribution: Contribute back findings to the open-source community, adding to current hypervisor research.
 
