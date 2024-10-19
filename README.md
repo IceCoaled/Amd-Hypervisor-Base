@@ -10,22 +10,21 @@ The screenshot above shows successful steps during hypervisor initialization, in
 
 Background Research
 
-AMD Programming References:
+AMD Reference 1 [(24593)](https://www.amd.com/content/dam/amd/en/documents/processor-tech-docs/programmer-references/24593.pdf)
 
-AMD SVM Reference (24594)
+AMD Reference 2 [(24594)](https://www.amd.com/content/dam/amd/en/documents/processor-tech-docs/programmer-references/24594.pdf)
 
-AMD Processor Reference (24593)
-
-Anti-Cheat Detection for Vm exits:
+Secret Club Reference[(2020/04/12)](https://secret.club/2020/04/13/how-anti-cheats-detect-system-emulation.html)
 
 How Anti-Cheats Detect System Emulation by Secret Club. This article discusses the techniques anti-cheat solutions use to detect system emulation, which is highly relevant to bypassing anti-virtualization detection when running the hypervisor.
 
 Open Source Projects for Reference:
 
 SimpleSvm by Tandasat — A project demonstrating the basics of AMD SVM implementation in a simple hypervisor.
+[(simpleVisor)](https://github.com/tandasat/SimpleSvm/tree/master)
 
 HV by Jonomango — Another open-source hypervisor project that was used as inspiration for certain parts of our implementation.
-
+[(jonomango)](https://github.com/jonomango/hv/tree/main)
 Project Highlights
 
 Driver Setup and Initialization: The project successfully initializes the driver entry points, indicating module and kernel list success. The setup includes nested pages and MSR map configurations.
