@@ -1,0 +1,62 @@
+;
+; Hypervisor2.inf
+;
+
+[Version]
+Signature   = "$WINDOWS NT$"
+Class       = System ; TODO: specify appropriate Class
+ClassGuid   = {4d36e97d-e325-11ce-bfc1-08002be10318} ; TODO: specify appropriate ClassGuid
+Provider    = %ManufacturerName%
+CatalogFile = Hypervisor2.cat
+DriverVer   = ; TODO: set DriverVer in stampinf property pages
+PnpLockdown = 1
+
+[DestinationDirs]
+DefaultDestDir = 13
+
+[SourceDisksNames]
+1 = %DiskName%,,,""
+
+[SourceDisksFiles]
+Hypervisor2.sys  = 1,,
+
+;*****************************************
+; Install Section
+;*****************************************
+
+[Manufacturer]
+%ManufacturerName% = Standard,NT$ARCH$.10.0...16299 ; %13% support introduced in build 16299
+
+[Standard.NT$ARCH$.10.0...16299]
+%Hypervisor2.DeviceDesc% = Hypervisor2_Device, Root\Hypervisor2 ; TODO: edit hw-id
+
+[Hypervisor2_Device.NT]
+CopyFiles = File_Copy
+
+[File_Copy]
+Hypervisor2.sys
+
+;-------------- Service installation
+[Hypervisor2_Device.NT.Services]
+AddService = Hypervisor2,%SPSVCINST_ASSOCSERVICE%, Hypervisor2_Service_Inst
+
+; -------------- Hypervisor2 driver install sections
+[Hypervisor2_Service_Inst]
+DisplayName    = %Hypervisor2.SVCDESC%
+ServiceType    = 1               ; SERVICE_KERNEL_DRIVER
+StartType      = 3               ; SERVICE_DEMAND_START
+ErrorControl   = 1               ; SERVICE_ERROR_NORMAL
+ServiceBinary  = %13%\Hypervisor2.sys
+
+[Hypervisor2_Device.NT.Wdf]
+KmdfService = Hypervisor2, Hypervisor2_wdfsect
+
+[Hypervisor2_wdfsect]
+KmdfLibraryVersion = $KMDFVERSION$
+
+[Strings]
+SPSVCINST_ASSOCSERVICE = 0x00000002
+ManufacturerName = "<Your manufacturer name>" ;TODO: Replace with your manufacturer name
+DiskName = "Hypervisor2 Installation Disk"
+Hypervisor2.DeviceDesc = "Hypervisor2 Device"
+Hypervisor2.SVCDESC = "Hypervisor2 Service"

@@ -1,0 +1,104 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Driver Files">
+      <UniqueIdentifier>{8E41214B-6785-4CFE-B992-037D68949A14}</UniqueIdentifier>
+      <Extensions>inf;inv;inx;mof;mc;</Extensions>
+    </Filter>
+    <Filter Include="SVM">
+      <UniqueIdentifier>{66b768b1-f200-43b9-a29d-fdd690b01297}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="STRUCTS">
+      <UniqueIdentifier>{3524c979-ddfe-46a7-8ed1-427e3959c024}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="VMEXIT">
+      <UniqueIdentifier>{88ef171a-32e3-4941-94cc-8fc03cbed5e4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="HYPERVISOR">
+      <UniqueIdentifier>{0dfe029d-ebb8-437d-b3fc-20538838ff4a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="UTILS">
+      <UniqueIdentifier>{ab2251fb-5dd3-4b9a-be3a-3826b9180f0d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ASM">
+      <UniqueIdentifier>{7babe79f-13ae-4413-a1a3-4efd96bf3934}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="REGISTERS">
+      <UniqueIdentifier>{561f6d97-140f-4e20-bf11-8c59d1c8a548}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <Inf Include="Hypervisor2.inf">
+      <Filter>Driver Files</Filter>
+    </Inf>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Memory.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Defines.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Cpu.hpp">
+      <Filter>REGISTERS</Filter>
+    </ClInclude>
+    <ClInclude Include="GeneralPurposeRegister.hpp">
+      <Filter>REGISTERS</Filter>
+    </ClInclude>
+    <ClInclude Include="CustomFunctions.hpp">
+      <Filter>UTILS</Filter>
+    </ClInclude>
+    <ClInclude Include="Eprocess.hpp">
+      <Filter>STRUCTS</Filter>
+    </ClInclude>
+    <ClInclude Include="KThread.hpp">
+      <Filter>STRUCTS</Filter>
+    </ClInclude>
+    <ClInclude Include="UndefinedStructs.hpp">
+      <Filter>STRUCTS</Filter>
+    </ClInclude>
+    <ClInclude Include="Svm.hpp">
+      <Filter>SVM</Filter>
+    </ClInclude>
+    <ClInclude Include="SvmUnions.hpp">
+      <Filter>SVM</Filter>
+    </ClInclude>
+    <ClInclude Include="VmExit.hpp">
+      <Filter>VMEXIT</Filter>
+    </ClInclude>
+    <ClInclude Include="Hypervisor.hpp">
+      <Filter>HYPERVISOR</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Driver.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CustomFunctions.cpp">
+      <Filter>UTILS</Filter>
+    </ClCompile>
+    <ClCompile Include="VmExit.cpp">
+      <Filter>VMEXIT</Filter>
+    </ClCompile>
+    <ClCompile Include="Hypervisor.cpp">
+      <Filter>HYPERVISOR</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <MASM Include="ASM.asm">
+      <Filter>ASM</Filter>
+    </MASM>
+  </ItemGroup>
+</Project>
