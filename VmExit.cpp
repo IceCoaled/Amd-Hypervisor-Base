@@ -1,6 +1,5 @@
 #include "VmExit.hpp"
 
-
 #pragma intrinsic(__rdtsc)
 #pragma intrinsic(__writemsr)
 #pragma intrinsic(__readmsr)
@@ -8,37 +7,18 @@
 #pragma intrinsic(_xsetbv)
 #pragma intrinsic(__rdtscp)
 
-
-
 namespace Vmexits
 {
-	
-	
-	void FlushTlbEntries(__in _HV_CPU* currentProcessor, __in uint32_t flushType)
-	{
-		currentProcessor->guestVmcb.controlArea.guestAsidTlbControl.tlb_control |= flushType;
-	}
-
-
-
-	void CleanVmcb(__in _HV_CPU* currentProcessor, __in bool clean)
-	{
-		if (clean) currentProcessor->guestVmcb.controlArea.vmcbClean.value = 0x0U;
-		else currentProcessor->guestVmcb.controlArea.vmcbClean.value = 0xFFFFFFFFU;
-	}
-
-	
-	bool Cpl3(__in _HV_CPU* currentProcessor)
+	// Determines if the current privilege level (CPL) is 3 and whether nRip is within the expected range.
+	bool Cpl3( __inout _HV_CPU* currentProcessor )
 	{
 		return currentProcessor->guestVmcb.stateSaveArea.cpl == DPL_USER && currentProcessor->guestVmcb.controlArea.nRip < 0x7FFFFFFEFFFF;
 	}
 
-
-
-	void GeneralException(__in _HV_CPU* currentProcessor)
+	// Injects a general protection fault exception into the guest.
+	void GeneralException( __inout _HV_CPU* currentProcessor )
 	{
 		_EVENTINJ exception = { 0 };
-
 		exception.bit.type = INTERRUPT_TYPE_HARDWARE_EXCEPTION;
 		exception.bit.valid = 1;
 		exception.bit.errorCodeValid = 1;
@@ -47,12 +27,10 @@ namespace Vmexits
 		currentProcessor->guestVmcb.controlArea.eventInj = exception.value;
 	}
 
-
-
-	void InvalidException(__in _HV_CPU* currentProcessor)
+	// Injects an undefined opcode exception into the guest.
+	void InvalidException( __inout _HV_CPU* currentProcessor )
 	{
 		_EVENTINJ exception = { 0 };
-
 		exception.bit.type = INTERRUPT_TYPE_HARDWARE_EXCEPTION;
 		exception.bit.valid = 1;
 		exception.bit.errorCodeValid = 1;
@@ -61,209 +39,190 @@ namespace Vmexits
 		currentProcessor->guestVmcb.controlArea.eventInj = exception.value;
 	}
 
-
-
-	void CpuidExit(__in _HV_CPU* currentProcessor)
+	// Handles CPUID instruction VM exits.
+	void CpuidExit( __inout _HV_CPU* currentProcessor, __inout _EXIT_CONTEXT* context )
 	{
-		auto* context = &currentProcessor->hostStack.layout.guestRegisters;
-		
-		_SEGMENT_ATTRIBUTES attributes = { 0 };
-		auto currentLeaf = static_cast<uint32_t>(context->rax.GetR64());
-		auto subLeaf = static_cast<uint32_t>(context->rcx.GetR64());
+		_SEGMENT_ATTRIBUTES attribute = { 0 };
+		auto currentLeaf = static_cast< int32_t >( context->guestRegisters->rax.GetR64() );
+		auto subLeaf = static_cast< int32_t >( context->guestRegisters->rcx.GetR64() );
 
-		int32_t registers[4] = { 0 };
-		__cpuidex(registers, currentLeaf, subLeaf);
+		int32_t registers[ 4 ] = { 0 };
+		__cpuidex( registers, currentLeaf, subLeaf );
 
+	#ifdef NESTED
+			// Custom handling for certain CPUID leaves in nested mode
+		switch ( currentLeaf )
+		{
+			case CPUID_PROCESSOR_AND_PROCESSOR_FEATURE_IDENTIFIERS:
+				// Set hypervisor present bit
+				registers[ 2 ] |= CPUID_FN0000_0001_ECX_HYPERVISOR_PRESENT;
+				break;
+			case CPUID_HV_VENDOR_AND_MAX_FUNCTIONS:
+				// Set vendor-specific values
+				registers[ 0 ] = CPUID_HV_MAX;
+				registers[ 1 ] = 'CecI';
+				registers[ 2 ] = 'elao';
+				registers[ 3 ] = '   d';
+				break;
+			case CPUID_HV_INTERFACE:
+				// Set hypervisor interface signature
+				registers[ 0 ] = '0#vH';
+				registers[ 1 ] = 0;
+				registers[ 2 ] = 0;
+				registers[ 3 ] = 0;
+				break;
+			case CPUID_UNLOAD:
+				// Handle CPUID_UNLOAD with specific privilege check
+				if ( subLeaf == CPUID_UNLOAD )
+				{
+					attribute.value = currentProcessor->guestVmcb.stateSaveArea.ss.attributes.value;
+					if ( attribute.bit.dpl == DPL_SYSTEM )
+					{
+						context->exit = true;
+					}
+				}
+				break;
+			default:
+				break;
+		}
+	#endif
 
-		context->rax = registers[0];
-		context->rbx = registers[1];
-		context->rcx = registers[2];
-		context->rdx = registers[3];
+			// Update guest registers with the result of CPUID
+		context->guestRegisters->rax = registers[ 0 ];
+		context->guestRegisters->rbx = registers[ 1 ];
+		context->guestRegisters->rcx = registers[ 2 ];
+		context->guestRegisters->rdx = registers[ 3 ];
 
-
+		// Move RIP to the next instruction
 		currentProcessor->guestVmcb.stateSaveArea.rip = currentProcessor->guestVmcb.controlArea.nRip;
 	}
 
-
-
-	void MsrExit(__in _HV_CPU* currentProcessor)
+	// Handles MSR read/write VM exits.
+	void MsrExit( __inout _HV_CPU* currentProcessor, __inout _EXIT_CONTEXT* context )
 	{
-		auto* context = &currentProcessor->hostStack.layout.guestRegisters;
-		auto msrRegister = static_cast<uint32_t>(context->rcx & MAXUINT32);
+		auto msrRegister = static_cast< uint32_t >( context->guestRegisters->rcx & MAXUINT32 );
 		auto writeAccess = currentProcessor->guestVmcb.controlArea.exitInfo1 != 0;
 		ULARGE_INTEGER value = { 0 };
 
-#ifdef HYPER_V
-		if (!HypervMsr(msrRegister))
+		if ( OutsideMsr( msrRegister ) )
 		{
-			Vmexits::GeneralException(currentProcessor);
-		}
-		else if (writeAccess)
+			// Trigger general exception for unsupported MSRs
+			Vmexits::GeneralException( currentProcessor );
+			goto end;
+		} else if ( writeAccess )
 		{
-			value.LowPart = context->rax & MAXUINT32;
-			value.HighPart = context->rdx & MAXUINT32;
+			// Handle MSR write
+			value.LowPart = static_cast< ULONG >( context->guestRegisters->rax & MAXUINT32 );
+			value.HighPart = static_cast< ULONG >( context->guestRegisters->rdx & MAXUINT32 );
 
-			if (msrRegister == MSR_EFER)
+			if ( msrRegister == MSR_EFER )
 			{
 				_EFER_REGISTER efer{};
 				efer = value.QuadPart;
-				if (!currentProcessor->guestVmcb.stateSaveArea.efer.cmpSvmeBit(efer))
+				if ( !currentProcessor->guestVmcb.stateSaveArea.efer.cmpSvmeBit( efer ) )
 				{
-					Vmexits::InvalidException(currentProcessor);
-					goto end;
+					Vmexits::InvalidException( currentProcessor );
+				} else if ( !currentProcessor->guestVmcb.stateSaveArea.efer.cmpLmaBit( efer ) ||
+						   !currentProcessor->guestVmcb.stateSaveArea.efer.cmpLmeBit( efer ) ||
+						   !currentProcessor->guestVmcb.stateSaveArea.efer.cmpNxeBit( efer ) )
+				{
+					Vmexits::InvalidException( currentProcessor );
 				}
 
-				if (!currentProcessor->guestVmcb.stateSaveArea.efer.cmpLmaBit(efer) ||
-					!currentProcessor->guestVmcb.stateSaveArea.efer.cmpLmeBit(efer) ||
-					!currentProcessor->guestVmcb.stateSaveArea.efer.cmpNxeBit(efer))
-				{
-					Vmexits::FlushTlbEntries(currentProcessor, TLB_FLUSH_GLOBAL_GUEST_TLB);
-				}
+				currentProcessor->guestVmcb.stateSaveArea.efer = efer;
 			}
 
-			__writemsr(msrRegister, value.QuadPart);
-		}
-		else
+			// Write the MSR
+			__writemsr( msrRegister, value.QuadPart );
+		} else
 		{
-			value.QuadPart = __readmsr(msrRegister);
-
-			value.LowPart = context->rax & MAXUINT32;
-			value.HighPart = context->rdx & MAXUINT32;
+			// Handle MSR read
+			value.QuadPart = __readmsr( msrRegister );
+			context->guestRegisters->rax = value.LowPart;
+			context->guestRegisters->rdx = value.LowPart;
 		}
-#else
-		
-		if (OutSideMsrMap(msrRegister))
-		{
-			Vmexits::GeneralException(currentProcessor);
-		}
-		else if (writeAccess)
-		{
-			value.LowPart = context->rax & MAXUINT32;
-			value.HighPart = context->rdx & MAXUINT32;
-			
-			
-			if (msrRegister == MSR_EFER)
-			{
-				_EFER_REGISTER efer{};
-				efer = value.QuadPart;
-				if (!currentProcessor->guestVmcb.stateSaveArea.efer.cmpSvmeBit(efer))
-				{
-					Vmexits::InvalidException(currentProcessor);
-					goto end;
-				}
 
-				if (!currentProcessor->guestVmcb.stateSaveArea.efer.cmpLmaBit(efer) ||
-					!currentProcessor->guestVmcb.stateSaveArea.efer.cmpLmeBit(efer) ||
-					!currentProcessor->guestVmcb.stateSaveArea.efer.cmpNxeBit(efer))
-				{
-					Vmexits::FlushTlbEntries(currentProcessor, TLB_FLUSH_GLOBAL_GUEST_TLB);
-				}
-			}
-
-			__writemsr(msrRegister, value.QuadPart);
-		}
-		else
-		{
-			value.QuadPart = __readmsr(msrRegister);
-
-			value.LowPart = context->rax & MAXUINT32;
-			value.HighPart = context->rdx & MAXUINT32;
-		}
-#endif //!HYPER_V 
-
-		end:
-
+	end:
+		// Move RIP to the next instruction
 		currentProcessor->guestVmcb.stateSaveArea.rip = currentProcessor->guestVmcb.controlArea.nRip;
 	}
 
-
-
-	bool OutSideMsrMap(__in const uint32_t& msr)
+	// Checks if the MSR is within allowed ranges.
+	bool OutsideMsr( __inout const uint32_t& msr )
 	{
-		if ((msr > 0) && (msr < 0xc0011FFF)) return true;
-
-		return false;
-		
-	}
-
-
-
-	bool HypervMsr(__in const uint32_t& msr)
-	{
-		if (((msr > 0) && (msr < 0x00001FFF)) || ((msr > 0xC0000000) && (msr < 0xC0001FFF)) || (msr > 0xC0010000) && (msr < 0xC0011FFF)) return true;
+		if ( ( ( msr > 0 ) && ( msr < 0x00001FFF ) ) || ( ( msr > 0xC0000000 ) && ( msr < 0xC0001FFF ) ) || ( msr > 0xC0010000 ) && ( msr < 0xC0011FFF ) )
+			return true;
 
 		return false;
 	}
 
-
-
-	void RdtscExit(__in _HV_CPU* currentProcessor)
+	// Handles RDTSC instruction VM exits.
+	void RdtscExit( __inout _HV_CPU* currentProcessor, __inout _EXIT_CONTEXT* context )
 	{
-		auto* context = &currentProcessor->hostStack.layout.guestRegisters;
 		auto time = __rdtsc();
-		context->rax = (time & MAXUINT32);
-		context->rdx = (time >> 32);
+		context->guestRegisters->rax = static_cast< uint32_t >( time );
+		context->guestRegisters->rdx = static_cast< uint32_t >( time >> 32 );
 
+		// Move RIP to the next instruction
 		currentProcessor->guestVmcb.stateSaveArea.rip = currentProcessor->guestVmcb.controlArea.nRip;
 	}
 
-
-
-	void XSetBvExit(__in _HV_CPU* currentProcessor)
+	// Handles XSETBV instruction VM exits.
+	void XSetBvExit( __inout _HV_CPU* currentProcessor, __inout _EXIT_CONTEXT* context )
 	{
-		auto* context = &currentProcessor->hostStack.layout.guestRegisters;
 		_XCR0_REGISTER xcr0{};
-		auto& cachedXcr0 = currentProcessor->hostStack.layout.xSetBvMask; 
+		auto& cachedXcr0 = currentProcessor->hostStack.layout.xSetBvMask;
 		auto& cr4 = currentProcessor->guestVmcb.stateSaveArea.cr4;
 
-
-		if (cr4.bit.osxsave == 1)
+		// Check if OSXSAVE is enabled; if it is, inject an invalid exception
+		if ( cr4.bit.osxsave == 1 )
 		{
-			InvalidException(currentProcessor);
+			InvalidException( currentProcessor );
 			goto end;
 		}
-			
-		if (context->rcx != 0)
+
+		// XSETBV must be called with RCX == 0
+		if ( context->guestRegisters->rcx != 0 )
 		{
-			GeneralException(currentProcessor);
+			GeneralException( currentProcessor );
 			goto end;
 		}
-			
 
-		xcr0 = ((context->rdx & MAXUINT32) | (context->rax & MAXUINT32));
+		xcr0 = ( ( context->guestRegisters->rdx & MAXUINT32 ) | ( context->guestRegisters->rax & MAXUINT32 ) );
 
-		if (xcr0 != cachedXcr0)
+		// Ensure that XCR0 matches the cached value; otherwise, trigger exception
+		if ( xcr0 != cachedXcr0 )
 		{
-			GeneralException(currentProcessor);
+			GeneralException( currentProcessor );
 			goto end;
 		}
-			
-		if (!xcr0.CheckX87())
+
+		// Verify X87 state is enabled
+		if ( !xcr0.CheckX87() )
 		{
-			GeneralException(currentProcessor);
+			GeneralException( currentProcessor );
 			goto end;
 		}
-			
-		_xsetbv((context->rcx.GetR64()), xcr0.GetValue());
 
-		end:
+		// Execute XSETBV
+		_xsetbv( static_cast< uint32_t >( context->guestRegisters->rcx.GetR64() ), xcr0.GetValue() );
 
+	end:
+		// Move RIP to the next instruction
 		currentProcessor->guestVmcb.stateSaveArea.rip = currentProcessor->guestVmcb.controlArea.nRip;
 	}
 
-
-	void RdtscpExit(__in _HV_CPU* currentProcessor)
+	// Handles RDTSCP instruction VM exits.
+	void RdtscpExit( __inout _HV_CPU* currentProcessor, __inout _EXIT_CONTEXT* context )
 	{
-		auto* context = &currentProcessor->hostStack.layout.guestRegisters;
 		uint32_t rdtscpinput = 0;
-		auto time = __rdtscp(&rdtscpinput);
+		auto time = __rdtscp( &rdtscpinput );
 
-		context->rax = (time & MAXUINT32);
-		context->rdx = (time >> 32);
-		context->rcx = rdtscpinput;
+		context->guestRegisters->rax = static_cast< uint32_t >( time );
+		context->guestRegisters->rdx = static_cast< uint32_t >( time >> 32 );
+		context->guestRegisters->rcx = static_cast< uint32_t >( rdtscpinput );
 
+		// Move RIP to the next instruction
 		currentProcessor->guestVmcb.stateSaveArea.rip = currentProcessor->guestVmcb.controlArea.nRip;
 	}
-
-
 };

@@ -97,11 +97,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Macros.inc">
-      <Filter>ASM</Filter>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
     <MASM Include="ASM.asm">
       <Filter>ASM</Filter>
     </MASM>
