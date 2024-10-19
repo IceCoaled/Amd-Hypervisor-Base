@@ -4,7 +4,8 @@ Overview
 
 This project focuses on exploring hypervisor virtualization, specifically targeting AMD processors. It delves into the implementation, optimization, and detection methods of hypervisor-level virtualization, with emphasis on security mechanisms like System Virtual Machine Extensions (SVM) and how anti-cheat systems detect virtualization.
 
-![Debug Log Screenshot](Screenshot 2024-10-19 141743.png)
+![Debug Screenshot](https://github.com/user-attachments/assets/831189c7-8810-40c8-ad43-10283b1ba42d)
+
 
 The screenshot above shows successful steps during hypervisor initialization, including MSR Map Setup, Processor Virtualization, and Hypervisor Started messages. This indicates that our custom hypervisor is functioning correctly, passing key setup stages.
 
