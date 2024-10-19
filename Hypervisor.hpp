@@ -186,7 +186,6 @@ struct DPC_CONTEXT
 	void* context;
 	ProcessorFunction virtualizeFunction;
 	ProcessorFunction deVirtualizeFunction;
-	KSEMAPHORE dpcSemaphore;
 };
 
 
