@@ -51,7 +51,7 @@ LaunchVm proc frame
 
 MainLoop:
 
-        mov rax, [rsp]  ; RAX <= VpData->HostStackLayout.GuestVmcbPa
+        mov rax, [rsp]  ; RAX <= HV_CPU->HostStack.Layout.GuestVmcbPa
         vmload rax      ; load previously saved guest state from VMCB
         vmrun rax       ; Switch to the guest until #VMEXIT
         vmsave rax      ; Save current guest state to VMCB
